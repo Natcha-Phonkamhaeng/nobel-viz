@@ -13,27 +13,27 @@ df = pd.read_csv('data/nobel.csv')
 
 #-------------- For Line Chart -----------------------------------------
 dfGroup = df.groupby(['nobel year', 'gender']).size().to_frame(name='count').reset_index()
-fig = px.line(dfGroup, x='nobel year', y='count', color='gender')
-fig.update_layout(
+figLine = px.line(dfGroup, x='nobel year', y='count', color='gender', labels={'count': 'Numbers for Nobel Prize'})
+figLine.update_layout(
 			font=dict(color='white'), 
 			margin=dict(l=0, r=0, t=40, b=3),
-			paper_bgcolor='rgba(0,0,0,0)',)
-            #plot_bgcolor='rgb(0,0,0,0)')
+			paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(255,255,255,0.5)')
 
 #-------------- For Sunburst Chart -----------------------------------------
-fig2 = px.sunburst(df, path=['category', 'gender'])
-fig2.update_layout(title='Proportion of Gender',
-			font=dict(color='white'), 
-			margin=dict(l=0, r=0, t=40, b=3),
-			paper_bgcolor='rgba(0,0,0,0.3)',
-            plot_bgcolor='rgb(255,255,255)')
+figSun = px.sunburst(df, path=['category', 'gender'])
+figSun.update_layout(font=dict(color='white'), 
+			margin=dict(l=0, r=0, t=0, b=0),
+			paper_bgcolor='rgba(0,0,0,0)',) # making eges transparent
+            #plot_bgcolor='rgb(255,255,255)')
+figSun.update_traces(marker_line_color='rgba(255,0,255,0.3)') # set the color border
 
 #-------------- For Choropeth Map -----------------------------------------
 dfChoro = df.groupby(['alpha-3','birth_country']).size().reset_index(name='count')
 figChoro = px.choropleth(dfChoro, locations='alpha-3', color='count', hover_name='birth_country')
 #figChoro.update_geos(fitbounds="locations", visible=True)
-figChoro.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, geo=dict(bgcolor= 'rgba(0,0,0,0)'), paper_bgcolor='rgba(0,0,0,0.1)',)
-figChoro.update_traces(marker_line_width=0)
+figChoro.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, geo=dict(bgcolor= 'rgba(0,0,0,0)'), paper_bgcolor='rgba(0,0,0,0)',)
+#figChoro.update_traces(marker_line_width=0)
 
 #--------------------------------------------------------------------------
 
@@ -42,9 +42,13 @@ navbar = dbc.NavbarSimple(
         #dbc.NavItem(dbc.NavLink("Page 1", href="#")),
         dbc.DropdownMenu(
             children=[
-                dbc.DropdownMenuItem("All", href="#", id='page-1'),
-                dbc.DropdownMenuItem("Page 2", href="#", id='page-2'),
-                dbc.DropdownMenuItem("Page 3", href="#", id='page-3'),
+                dbc.DropdownMenuItem("All", href="#", id='all'),
+                dbc.DropdownMenuItem("Physics", href="#", id='physics'),
+                dbc.DropdownMenuItem("Chemistry", href="#", id='chemistry'),
+                dbc.DropdownMenuItem("Peace", href="#", id='peace'),
+                dbc.DropdownMenuItem("Literature", href="#", id='literature'),
+                dbc.DropdownMenuItem("Economics", href="#", id='economics'),
+                dbc.DropdownMenuItem("Medicine", href="#", id='medicine'),
             ],
             nav=True,
             in_navbar=True,
@@ -68,15 +72,15 @@ app.layout = html.Div([
 	dbc.Container([
 		dbc.Row([
 			dbc.Col([
-					dcc.Graph(figure=fig2, id='my-pie', style={'width': '40vh', 'height': '40vh'})
-				], style={'width': '50vh', 'height': '50vh'}, xs=10, sm=5, md=5, lg=6, xl=5),			
+				dcc.Graph(figure=figSun, id='my-sun')
+				], width=3),			
 			dbc.Col([
-				
-				])
-			], class_name='g-0'),
+				dcc.Graph(figure=figLine, id='my-graph2')
+				], width=9)
+			], class_name='mb-3'),
 		dbc.Row([
 			dbc.Col([
-				dcc.Graph(figure=fig, id='my-graph')
+				dcc.Graph(figure=figChoro, id='my-graph3')
 				])
 			])
 		])
@@ -84,35 +88,39 @@ app.layout = html.Div([
 	
 
 @app.callback(
-    Output('my-graph', "figure"),
-    Input('page-1', 'n_clicks'),
-    Input('page-2', 'n_clicks'),
-    Input('page-3', 'n_clicks'),
+    Output('my-sun', "figure"),
+    Output('my-graph2', 'figure'),
+    Output('my-graph3', 'figure'),
+    Input('all', 'n_clicks'),
+    Input('physics', 'n_clicks'),
+    Input('chemistry', 'n_clicks'),
+    Input('peace', 'n_clicks'),
+    Input('literature', 'n_clicks'),
+    Input('economics', 'n_clicks'),
+    Input('medicine', 'n_clicks'),
     prevent_initial_update=True
 )
-def update_label(n1, n2, n3):
-	dff = px.data.tips()
-	wide_df = px.data.medals_wide()
-
+def update_label(n_all, n_physics, n_chem, n_peace, n_lite, n_econ, n_med):
 	ctx = dash.callback_context
 
 	if not ctx.triggered:
 		
-		# button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-		return figChoro
+		return figSun, figLine, figChoro
 	elif ctx.triggered:
 		button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 		#print(button_id)
-		if button_id == 'page-2':
-			fig2 = px.pie(dff, values='tip', names='day')
+		if button_id == 'physics':
+			
 			# button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 			# print(button_id)
-			return fig
-		if button_id == 'page-3':
-			fig3 = px.bar(wide_df, x="nation", y=["gold", "silver", "bronze"], title="Wide-Form Input")
-			return fig3
+			return figSun, figLine, figChoro
+		if button_id == 'chemistry':
+			data_canada = px.data.gapminder().query("country == 'Canada'")
+			figBar = px.bar(data_canada, x='year', y='pop')
+			
+			return figSun, figLine, figBar
 		else:
-			return figChoro
+			return figSun, figLine, figChoro
 	
 
 if __name__ == '__main__':
