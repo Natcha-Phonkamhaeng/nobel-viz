@@ -10,16 +10,7 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX],
 # server = app.server
 
 df = pd.read_csv('data/nobel.csv')
-dff = df.groupby(['nobel year', 'category', 'gender']).size().reset_index(name='count')
-fig = px.histogram(dff, x="nobel year", y='count', color="gender",
-                   marginal="rug", # or violin, rug
-                   hover_data=dff.columns, labels={'count': 'Count of Gender'}).update_layout(yaxis_title='Count of Gender', paper_bgcolor='#F8F8FF')
 
-figSun = px.sunburst(df, path=['category', 'gender']).update_layout(margin=dict(l=0, r=0, t=0, b=0),paper_bgcolor='#F8F8FF')
-
-fig2 = px.histogram(dff, x="nobel year", y='count', color="category",
-                   marginal="rug", # or violin, rug
-                   hover_data=dff.columns)
 
 app.layout = dbc.Container([
 	dbc.Row([
@@ -41,7 +32,7 @@ app.layout = dbc.Container([
 					html.Hr(),
 					dbc.Row([
 						dbc.Col([
-							dcc.Graph(figure=fig, id='gender-fig')
+							dcc.Graph(id='gender-fig')
 							])
 						])
 					])
@@ -52,22 +43,22 @@ app.layout = dbc.Container([
 				dbc.CardBody([
 					dbc.Row([
 						dbc.Col([
-							html.H3(['Gender and Category'])
+							html.H3(['Category'])
 							])
 						]),
 					html.Hr(),
 					dbc.Row([
 						dbc.Col([
 							html.P(['Year']),
-							dcc.Dropdown(options=['1990', '1991', '1992']),
+							dcc.Dropdown(options=[x for x in df['nobel year'].unique()], id='dropdown_year'),
 							html.P(['Category'], className='mt-3'),
-							dcc.Dropdown(options=['Physic', 'Medical'])
+							dcc.Dropdown(options=[x for x in df['category'].unique()], id='dropdown_cat')
 							], width=2),
 						dbc.Col([
-							dcc.Graph(figure=figSun, id='cate-sun')
+							dcc.Graph(figure={}, id='cat-sun')
 							], width=3),
 						dbc.Col([
-							dcc.Graph(figure=fig2, id='cate-fig')
+							dcc.Graph(figure={}, id='cat-fig')
 							], width=7)
 						])
 					])
@@ -78,6 +69,36 @@ app.layout = dbc.Container([
 		])
 	])
 	
+@callback(
+	Output('gender-fig', 'figure'),
+	Output('cat-sun', 'figure'),
+	Output('cat-fig', 'figure'),
+	Input('dropdown_year', 'value'),
+	Input('dropdown_cat', 'value')
+	)
+def update_graph(select_year, select_cat):
+	dff = df.copy()
+
+	#------------------------- Graph on Gender #-------------------------
+	dfGroup = df.groupby(['nobel year', 'category', 'gender']).size().reset_index(name='count')
+	fig = px.histogram(dfGroup, x="nobel year", y='count', color="gender",
+                   marginal="rug", # or violin, rug
+                   hover_data=dfGroup.columns, labels={'count': 'Count of Gender'}).update_layout(yaxis_title='Count of Gender', paper_bgcolor='#F8F8FF')
+	
+	#------------------------- Graph on Category #-------------------------
+	dffGroup = dff.groupby(['nobel year', 'category']).size().reset_index(name='count')
+	figSun = px.sunburst(dff, path=['category', 'gender']).update_layout(margin=dict(l=0, r=0, t=0, b=0),paper_bgcolor='#F8F8FF')
+	fig2 = px.histogram(dffGroup, x='nobel year', y='count', color='category', barmode='group', labels={'count': 'Number of Nobel Prize Received'})
+	fig2.update_layout(yaxis_title='Number of Nobel Prize Received')
+	
+	if select_year:
+		mark = (dffGroup['nobel year'] == select_year)
+		fig2 = px.histogram(dffGroup[mark], x='nobel year', y='count', color='category', barmode='group', labels={'count': 'Number of Nobel Prize Received'})
+		fig2.update_layout(yaxis_title='Number of Nobel Prize Received')
+		fig2.update_xaxes(visible=False)
+		return fig, figSun, fig2
+	else:
+		return fig, figSun, fig2
 
 
 if __name__ == '__main__':
