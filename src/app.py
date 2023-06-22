@@ -3,11 +3,12 @@ from dash import Dash, html, Output, Input, dcc, callback
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
+import dash_ag_grid as dag
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX],
 		meta_tags=[{'name': 'viewport','content': 'width=device-width, initial-scale=1.0, maximum-scale=1.2, minimum-scale=0.5,'}])
 
-# server = app.server
+server = app.server
 
 df = pd.read_csv('data/nobel.csv')
 
@@ -22,6 +23,24 @@ color_mapping = {
 	'female':'	fuchsia',
 	'org': 'silver',
 }
+
+columnDefs = [
+	{'field': 'nobel year'},
+	{'field': 'firstname'},
+	{'field': 'lastname'},
+	{'field': 'category'},
+	{'field': 'motivation'},
+	{'field': 'gender'},
+	{'field': 'age'},
+	{'field': 'birth_country'},
+]
+
+def figMap():
+	# world map of country category
+	dfMap = df.groupby(['alpha-3','birth_country']).size().reset_index(name='count')
+	figMap = px.choropleth(dfMap, locations='alpha-3', color='count', hover_name='birth_country')
+	figMap.update_layout(paper_bgcolor='rgb(248,248,255)')
+	return figMap
 
 app.layout = dbc.Container([
 	dbc.Row([
@@ -82,20 +101,30 @@ app.layout = dbc.Container([
 				dbc.CardBody([
 					dbc.Row([
 						dbc.Col([
-							html.H3(['Country'])
+							html.H3(['Country']),
+							html.Label(['Based on birth country'])
 							])
 						]),
 					html.Hr(),
 					dbc.Row([
 						dbc.Col([
 							html.P(['Country']),
-							dcc.Dropdown(options=[x for x in df['birth_country'].unique()], id='dropdown-country')
+							dcc.Dropdown(options=sorted([x for x in df['birth_country'].unique()], key=lambda x: (str(type(x)), x))[1:], 
+										id='dropdown-country')
 							], width=4)
 						]),
 					html.Br(),
 					dbc.Row([
 						dbc.Col([
-							dcc.Graph(id='country-map')
+							dcc.Graph(figure=figMap(), id='country-map'),
+							html.Br(),
+							dag.AgGrid(
+								id='grid-table', 
+								rowData=df.to_dict('records'), 
+								columnDefs=columnDefs,
+								defaultColDef={"resizable": True, "sortable": True, "filter": True, "minWidth":115},
+								dashGridOptions={"pagination": True, "paginationPageSize":8, "domLayout": "autoHeight"},
+								)
 							])
 						])
 					])
@@ -148,17 +177,20 @@ def update_graph(select_year):
 	else:
 		return fig, figSun, fig2
 
-# callback for Country
+#callback for Country
 @callback(
-	Output('country-map', 'figure'),
+	Output('grid-table', 'rowData'),
 	Input('dropdown-country', 'value')
 	)
 def update_map(select_country):
 	dff = df.copy()
-	dfMap = dff.groupby(['alpha-3','birth_country']).size().reset_index(name='count')
-	figMap = px.choropleth(dfMap, locations='alpha-3', color='count', hover_name='birth_country')
 
-	return figMap
+	if select_country:
+		mask = (dff['birth_country'] == select_country)
+		dff = dff[mask]
+		return dff.to_dict('records')
+	else:
+		return dff.to_dict('records')
 
 if __name__ == '__main__':
     app.run_server(debug=True)
