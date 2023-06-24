@@ -2,6 +2,7 @@ services:
   # See https://render.com/docs/blueprint-spec for more info on render blueprints
   - type: web
     name: nobel_viz
+    region: singapore
     env: python
     plan: free
     # A requirements.txt file must exist
