@@ -78,7 +78,9 @@ gender_layout = dbc.Row([
 							])
 						])
 					])
-				])
+				],
+				class_name='bg-card mb-5'
+				)
 			])
 		])
 
@@ -105,7 +107,9 @@ category_layout = dbc.Row([
 							], width=7)
 						])
 						])
-					])
+					],
+					class_name='bg-card mb-5'
+					)
 				])
 			])
 
