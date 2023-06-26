@@ -98,10 +98,10 @@ category_layout = dbc.Row([
 							dcc.Dropdown(options=[x for x in df['nobel year'].unique()], id='dropdown_year'),
 							], width=2),
 						dbc.Col([
-							dcc.Graph(figure={}, id='cat-sun')
+							dcc.Loading(children=[dcc.Graph(figure={}, id='cat-sun')])
 							], width=3),
 						dbc.Col([
-							dcc.Graph(figure={}, id='cat-bar')
+							dcc.Loading(children=[dcc.Graph(figure={}, id='cat-bar')])
 							], width=7)
 						])
 						])
